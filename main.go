@@ -5,6 +5,7 @@ import (
 	"image"
 	"image/color"
 	"image/jpeg"
+	"math"
 	"os"
 )
 
@@ -44,22 +45,50 @@ func max(x, y int) int {
 }
 
 func main() {
-	fmt.Println("Hello, world.")
 	img, err := readImage("./wallpaper.jpg")
 	if err != nil {
 		panic(err)
 	}
 	mod := image.NewRGBA(img.Bounds())
 	// kernel size
-	radius := 3
-	// sigma := max((radius / 2), 1)
-	// kernelWidth := (radius * 2) + 1 // left + right + center
-	// var kernel = make([]float32, kernelWidth)
+	radius := 7
+	var sigma float64 = math.Max(float64(radius/2), 1.0)
+	var kernelWidth int = (radius * 2) + 1 // left + right + center
+
+	// Create a 2d array of length kernelWidth that holds []float64
+	var kernel = make([][]float64, kernelWidth)
+	// Fill each of the indices with []float64 arrays
+	for i := range kernel {
+		kernel[i] = make([]float64, kernelWidth)
+	}
+
+	var twoPi float64 = 2 * math.Pi
+	var sum float64 = 0
+
+	// Generate the gaussian kernel values
+	for x := -radius; x < radius; x++ {
+		for y := -radius; y < radius; y++ {
+			var expNumerator float64 = -(float64(x*x) + float64(y*y))
+			var expDenominator float64 = 2 * (sigma * sigma)
+			var e float64 = math.Pow(math.E, float64(expNumerator/expDenominator))
+			var value float64 = e / float64(twoPi*sigma*sigma)
+			kernel[x+radius][y+radius] = value
+			sum += value
+		}
+	}
+	// Normalize the kernel, so that all the values of the kernel adds up to 1
+	for x := 0; x < kernelWidth; x++ {
+		for y := 0; y < kernelWidth; y++ {
+			kernel[x][y] /= sum
+		}
+	}
 
 	point := img.Bounds().Size()
 	width := point.X
 	height := point.Y
-	var constant uint16 = 50
+	// TODO : contrast
+	// var contrast uint16 = 0
+	fmt.Println("kernel width : ", kernelWidth)
 
 	fmt.Println(fmt.Sprintf("Width : %d, Height : %d", width, height))
 	// Iterate every pixel
@@ -70,26 +99,28 @@ func main() {
 			botRightX := min(width-1, i+radius)
 			botRightY := min(height-1, j+radius)
 
-			// Starts with 1 as this starts off with the values at i, j
-			var amount int = 0
-			var r uint32 = 0
-			var g uint32 = 0
-			var b uint32 = 0
+			var r float64 = 0
+			var g float64 = 0
+			var b float64 = 0
 			for y := topLeftY; y <= botRightY; y++ {
 				for x := topLeftX; x <= botRightX; x++ {
 					sCol := img.At(x, y)
 					sR, sG, sB, _ := sCol.RGBA()
-					r += sR
-					g += sG
-					b += sB
-					amount++
+
+					dx := (x - i) + radius
+					dy := (y - j) + radius
+
+					value := kernel[dx][dy]
+
+					r += float64(sR) * value
+					g += float64(sG) * value
+					b += float64(sB) * value
 				}
 			}
-			// fmt.Println("Amount : ", amount)
 
-			r8 := clampRGB(uint16(r/uint32(amount)/256) + constant)
-			g8 := clampRGB(uint16(g/uint32(amount)/256) + constant)
-			b8 := clampRGB(uint16(b/uint32(amount)/256) + constant)
+			r8 := uint8(uint16(r) / 256)
+			g8 := uint8(uint16(g) / 256)
+			b8 := uint8(uint16(b) / 256)
 			mod.Set(i, j, color.RGBA{
 				R: r8,
 				G: g8,
