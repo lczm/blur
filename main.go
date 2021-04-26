@@ -51,11 +51,15 @@ func main() {
 	}
 	mod := image.NewRGBA(img.Bounds())
 	// kernel size
-	radius := 1
+	radius := 3
+	// sigma := max((radius / 2), 1)
+	// kernelWidth := (radius * 2) + 1 // left + right + center
+	// var kernel = make([]float32, kernelWidth)
+
 	point := img.Bounds().Size()
 	width := point.X
 	height := point.Y
-	var constant uint16 = 0
+	var constant uint16 = 50
 
 	fmt.Println(fmt.Sprintf("Width : %d, Height : %d", width, height))
 	// Iterate every pixel
@@ -67,15 +71,12 @@ func main() {
 			botRightY := min(height-1, j+radius)
 
 			// Starts with 1 as this starts off with the values at i, j
-			var amount int = 1
-			col := img.At(i, j)
-			r, g, b, _ := col.RGBA()
+			var amount int = 0
+			var r uint32 = 0
+			var g uint32 = 0
+			var b uint32 = 0
 			for y := topLeftY; y <= botRightY; y++ {
 				for x := topLeftX; x <= botRightX; x++ {
-					if x == i && y == j {
-						continue
-					}
-					// The values of the ones at the surrounding pixels within the kernel
 					sCol := img.At(x, y)
 					sR, sG, sB, _ := sCol.RGBA()
 					r += sR
