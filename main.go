@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"image"
 	"image/color"
@@ -44,7 +45,31 @@ func max(x, y int) int {
 	return y
 }
 
+// Cli arguments
+var inFile string
+var outFile string
+var technique string
+var radius int
+
+func init() {
+	// Input file
+	flag.StringVar(&inFile, "i", "", "Input Image")
+	flag.StringVar(&inFile, "input", "", "Input Image")
+	// Output file
+	flag.StringVar(&outFile, "o", "", "Output Image")
+	flag.StringVar(&outFile, "output", "", "Output Image")
+	// Technique
+	flag.StringVar(&technique, "t", "gaussian", "Technique")
+	flag.StringVar(&technique, "technique", "gaussian", "Technique")
+	// Radius
+	flag.IntVar(&radius, "r", 1, "Radius")
+	flag.IntVar(&radius, "radius", 1, "Radius")
+}
+
 func main() {
+	// Parse arguments
+	flag.Parse()
+
 	img, err := readImage("./wallpaper.jpg")
 	if err != nil {
 		panic(err)
