@@ -144,50 +144,57 @@ func main() {
 		}
 	}
 
-	point := img.Bounds().Size()
-	width := point.X
-	height := point.Y
-	fmt.Println("kernel width : ", kernelWidth)
+	size := img.Bounds().Size()
+	width := size.X
+	height := size.Y
 
-	fmt.Println(fmt.Sprintf("Width : %d, Height : %d", width, height))
+	if verbose {
+		fmt.Println("Image width:", width)
+		fmt.Println("Image height:", height)
+		fmt.Println("Kernel width:", kernelWidth)
+	}
+
+	var calculateRGB = func(i, j int) {
+		topLeftX := max(0, i-radius)
+		topLeftY := max(0, j-radius)
+		botRightX := min(width-1, i+radius)
+		botRightY := min(height-1, j+radius)
+		var r float64 = 0
+		var g float64 = 0
+		var b float64 = 0
+		for y := topLeftY; y <= botRightY; y++ {
+			for x := topLeftX; x <= botRightX; x++ {
+				sCol := img.At(x, y)
+				sR, sG, sB, _ := sCol.RGBA()
+				dx := (x - i) + radius
+				dy := (y - j) + radius
+				value := kernel[dx][dy]
+				r += float64(sR) * value
+				g += float64(sG) * value
+				b += float64(sB) * value
+			}
+		}
+		r8 := clampRGB(int(r/256) + contrast)
+		g8 := clampRGB(int(g/256) + contrast)
+		b8 := clampRGB(int(b/256) + contrast)
+		mod.Set(i, j, color.RGBA{
+			R: r8,
+			G: g8,
+			B: b8,
+			A: 255,
+		})
+		// fmt.Println("calculating")
+	}
+
 	// Iterate every pixel
 	for j := 0; j < height; j++ {
 		for i := 0; i < width; i++ {
-			topLeftX := max(0, i-radius)
-			topLeftY := max(0, j-radius)
-			botRightX := min(width-1, i+radius)
-			botRightY := min(height-1, j+radius)
-
-			var r float64 = 0
-			var g float64 = 0
-			var b float64 = 0
-			for y := topLeftY; y <= botRightY; y++ {
-				for x := topLeftX; x <= botRightX; x++ {
-					sCol := img.At(x, y)
-					sR, sG, sB, _ := sCol.RGBA()
-
-					dx := (x - i) + radius
-					dy := (y - j) + radius
-
-					value := kernel[dx][dy]
-
-					r += float64(sR) * value
-					g += float64(sG) * value
-					b += float64(sB) * value
-				}
-			}
-
-			r8 := clampRGB(int(r/256) + contrast)
-			g8 := clampRGB(int(g/256) + contrast)
-			b8 := clampRGB(int(b/256) + contrast)
-			mod.Set(i, j, color.RGBA{
-				R: r8,
-				G: g8,
-				B: b8,
-				A: 255,
-			})
+			// calculateRGB(i, j)
+			go calculateRGB(i, j)
 		}
 	}
+
+	// fmt.Println("done")
 
 	writer, _ := os.Create(outFile)
 	jpeg.Encode(writer, mod, nil)
