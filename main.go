@@ -8,6 +8,7 @@ import (
 	"image/jpeg"
 	"math"
 	"os"
+	"time"
 )
 
 func readImage(filePath string) (image.Image, error) {
@@ -57,6 +58,9 @@ var radius int
 var contrast int
 var verbose bool
 
+// Start timer for verbose output
+var start time.Time
+
 func init() {
 	// Input file
 	flag.StringVar(&inFile, "i", "", "Input Image")
@@ -81,6 +85,10 @@ func init() {
 func main() {
 	// Parse arguments
 	flag.Parse()
+
+	if verbose {
+		start = time.Now()
+	}
 
 	if inFile == "" {
 		fmt.Println("Must have an input image, use -i or --input")
@@ -183,4 +191,9 @@ func main() {
 
 	writer, _ := os.Create(outFile)
 	jpeg.Encode(writer, mod, nil)
+
+	if verbose {
+		elapsed := time.Since(start)
+		fmt.Printf("Time taken: %s\n", elapsed)
+	}
 }
