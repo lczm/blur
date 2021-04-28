@@ -1,13 +1,16 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"image"
 	"image/color"
 	"image/jpeg"
+	"image/png"
 	"math"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -17,10 +20,21 @@ func readImage(filePath string) (image.Image, error) {
 		return nil, err
 	}
 	defer f.Close()
-	// TODO : Think about other image formats
-	image, err := jpeg.Decode(f)
-	// image, _, err := image.Decode(f)
-	return image, err
+
+	if strings.Contains(filePath, ".jpeg") || strings.Contains(filePath, ".jpg") {
+		image, err := jpeg.Decode(f)
+		return image, err
+	} else if strings.Contains(filePath, ".png") {
+		image, err := png.Decode(f)
+		return image, err
+	} else {
+		// Try to get a postfix for the image
+		splits := strings.Split(filePath, ".")
+		last := splits[len(splits)-1]
+		return nil, errors.New(
+			fmt.Sprintf("No image decoder for this file type: %c\n", last),
+		)
+	}
 }
 
 // Clamp rgb values
@@ -194,10 +208,20 @@ func main() {
 		}
 	}
 
-	// fmt.Println("done")
-
 	writer, _ := os.Create(outFile)
-	jpeg.Encode(writer, mod, nil)
+
+	// Get an encoder and encode based on user image requirements
+	if strings.Contains(outFile, ".jpeg") || strings.Contains(outFile, ".jpg") {
+		jpeg.Encode(writer, mod, nil)
+	} else if strings.Contains(outFile, ".png") {
+		png.Encode(writer, mod)
+	} else {
+		// Try to get a postfix for the image
+		splits := strings.Split(outFile, ".")
+		last := splits[len(splits)-1]
+		fmt.Printf("No image encoder for this file type: %c\n", last)
+		os.Exit(0)
+	}
 
 	if verbose {
 		elapsed := time.Since(start)
