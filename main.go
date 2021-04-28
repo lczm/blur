@@ -50,6 +50,7 @@ var inFile string
 var outFile string
 var technique string
 var radius int
+var contrast int
 
 func init() {
 	// Input file
@@ -64,22 +65,41 @@ func init() {
 	// Radius
 	flag.IntVar(&radius, "r", 1, "Radius")
 	flag.IntVar(&radius, "radius", 1, "Radius")
+	// Contrast
+	flag.IntVar(&contrast, "c", 0, "Contrast")
+	flag.IntVar(&contrast, "contrast", 0, "Contrast")
 }
 
 func main() {
 	// Parse arguments
 	flag.Parse()
 
-	img, err := readImage("./wallpaper.jpg")
+	if inFile == "" {
+		fmt.Println("Must have an input image, use -i or --input")
+		os.Exit(0)
+	}
+	if outFile == "" {
+		fmt.Println("Must have an output image, use -o or --output")
+		os.Exit(0)
+	}
+	if radius < 0 {
+		fmt.Println("Radius must be at least 1")
+		os.Exit(0)
+	}
+	if contrast < 0 || contrast > 255 {
+		fmt.Println("Contrast must be within 1 and 255")
+		os.Exit(0)
+	}
+
+	img, err := readImage(inFile)
 	if err != nil {
 		panic(err)
 	}
+	// Create new image
 	mod := image.NewRGBA(img.Bounds())
-	// kernel size
-	radius := 7
+
 	var sigma float64 = math.Max(float64(radius/2), 1.0)
 	var kernelWidth int = (radius * 2) + 1 // left + right + center
-
 	// Create a 2d array of length kernelWidth that holds []float64
 	var kernel = make([][]float64, kernelWidth)
 	// Fill each of the indices with []float64 arrays
@@ -111,8 +131,6 @@ func main() {
 	point := img.Bounds().Size()
 	width := point.X
 	height := point.Y
-	// TODO : contrast
-	// var contrast uint16 = 0
 	fmt.Println("kernel width : ", kernelWidth)
 
 	fmt.Println(fmt.Sprintf("Width : %d, Height : %d", width, height))
@@ -143,9 +161,9 @@ func main() {
 				}
 			}
 
-			r8 := uint8(uint16(r) / 256)
-			g8 := uint8(uint16(g) / 256)
-			b8 := uint8(uint16(b) / 256)
+			r8 := clampRGB(uint16(r/256) + uint16(contrast))
+			g8 := clampRGB(uint16(g/256) + uint16(contrast))
+			b8 := clampRGB(uint16(b/256) + uint16(contrast))
 			mod.Set(i, j, color.RGBA{
 				R: r8,
 				G: g8,
@@ -155,6 +173,6 @@ func main() {
 		}
 	}
 
-	writer, _ := os.Create("test.jpg")
+	writer, _ := os.Create(outFile)
 	jpeg.Encode(writer, mod, nil)
 }
