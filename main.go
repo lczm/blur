@@ -22,11 +22,15 @@ func readImage(filePath string) (image.Image, error) {
 	return image, err
 }
 
-// Given a uint16 (not a uint8) such that it does not overload,
-// clamp it back into a uint8, mainly used to add constants to colors
-func clampRGB(x uint16) uint8 {
+// Clamp rgb values
+// Takes in an integer and outputs a uint8(0-255)
+// takes in a signed integer as the values can be negative
+// i.e. negative contrast, goes below 0
+func clampRGB(x int) uint8 {
 	if x >= 255 {
 		return 255
+	} else if x < 0 {
+		return 0
 	}
 	return uint8(x)
 }
@@ -51,6 +55,7 @@ var outFile string
 var technique string
 var radius int
 var contrast int
+var verbose bool
 
 func init() {
 	// Input file
@@ -68,6 +73,9 @@ func init() {
 	// Contrast
 	flag.IntVar(&contrast, "c", 0, "Contrast")
 	flag.IntVar(&contrast, "contrast", 0, "Contrast")
+	// Verbosity
+	flag.BoolVar(&verbose, "v", false, "Verbose")
+	flag.BoolVar(&verbose, "verbose", false, "Verbose")
 }
 
 func main() {
@@ -86,7 +94,7 @@ func main() {
 		fmt.Println("Radius must be at least 1")
 		os.Exit(0)
 	}
-	if contrast < 0 || contrast > 255 {
+	if contrast < -255 || contrast > 255 {
 		fmt.Println("Contrast must be within 1 and 255")
 		os.Exit(0)
 	}
@@ -161,9 +169,9 @@ func main() {
 				}
 			}
 
-			r8 := clampRGB(uint16(r/256) + uint16(contrast))
-			g8 := clampRGB(uint16(g/256) + uint16(contrast))
-			b8 := clampRGB(uint16(b/256) + uint16(contrast))
+			r8 := clampRGB(int(r/256) + contrast)
+			g8 := clampRGB(int(g/256) + contrast)
+			b8 := clampRGB(int(b/256) + contrast)
 			mod.Set(i, j, color.RGBA{
 				R: r8,
 				G: g8,
